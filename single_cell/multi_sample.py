@@ -24,20 +24,23 @@ def get_default_ctx(config):
 def multi_sample_workflow(
     normal_wgs_bam,
     tumour_cell_bams,
+    results_dir,
     config,
+    raw_data_dir,
 ):
     """ Multiple sample pseudobulk workflow. """
 
-    normal_region_bam_template
-    tumour_region_bam_template
-    museq_vcf_template
-    strelka_snv_template
-    strelka_indel_template
-    snv_annotations_template
-    normal_seqdata_file
-    tumour_cell_seqdata_template
-    haplotypes_file
-    allele_counts_filename
+    normal_region_bam_template = os.path.join(raw_data_dir, 'normal_{region}.bam')
+    tumour_region_bam_template = os.path.join(raw_data_dir, '{sample_id}_{region}.bam')
+    normal_seqdata_file = os.path.join(raw_data_dir, 'normal_seqdata.h5')
+    tumour_cell_seqdata_template = os.path.join(raw_data_dir, '{sample_id}_{cell_id}_seqdata.h5')
+
+    museq_vcf_template = os.path.join(results_dir, '{sample_id}_museq.vcf')
+    strelka_snv_template = os.path.join(results_dir, '{sample_id}_strelka_snv.vcf')
+    strelka_indel_template = os.path.join(results_dir, '{sample_id}_strelka_indel.vcf')
+    snv_annotations_template = os.path.join(results_dir, '{sample_id}_snv_annotations.h5')
+    haplotypes_file = os.path.join(results_dir, 'haplotypes.tsv')
+    allele_counts_template = os.path.join(results_dir, '{sample_id}_allele_counts.h5')
 
     workflow = pypeliner.workflow.Workflow(
         default_ctx=get_default_ctx(config))
@@ -50,7 +53,7 @@ def multi_sample_workflow(
     workflow.set_filenames('strelka_snv.vcf', 'sample_id', template=strelka_snv_template)
     workflow.set_filenames('strelka_indel.vcf', 'sample_id', template=strelka_indel_template)
     workflow.set_filenames('snv_annotations.h5', 'sample_id', template=snv_annotations_template)
-    workflow.set_filenames('cells.h5', 'sample_id', 'cell_id', template=tumour_cell_seqdata_template)
+    workflow.set_filenames('tumour_cell_seqdata.h5', 'sample_id', 'cell_id', template=tumour_cell_seqdata_template)
 
     workflow.subworkflow(
         name='split_normal',
@@ -130,7 +133,7 @@ def multi_sample_workflow(
         name='infer_haps_from_bulk_normal',
         func=infer_haps.infer_haps_from_bulk_normal,
         args=(
-            mgd.InputFile(normal_wgs_bam, extensions=['.bai']),        
+            mgd.InputFile(normal_wgs_bam, extensions=['.bai']),
             mgd.OutputFile(normal_seqdata_file),
             mgd.OutputFile(haplotypes_file),
             config,
@@ -144,9 +147,8 @@ def multi_sample_workflow(
         args=(
             mgd.InputFile(haplotypes_filename),
             mgd.InputFile('tumour_cells.bam', 'sample_id', 'cell_id', extensions=['.bai']),
-            mgd.OutputFile('cells.h5', 'sample_id', 'cell_id', extensions=['.bai']),
-            mgd.InputFile(allele_counts_filename),
+            mgd.OutputFile('tumour_cell_seqdata.h5', 'sample_id', 'cell_id', extensions=['.bai']),
+            mgd.InputFile('allele_counts.h5', 'sample_id', template=allele_counts_template),
             config,
         ),
     )
-
