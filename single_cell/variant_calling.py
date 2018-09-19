@@ -118,9 +118,21 @@ def variant_calling_workflow(workflow, args):
 
     singlecellimage = config['docker']['images']['single_cell_pipeline']
 
+
+def variant_calling_workflow(
+    tumour_cell_bams,
+    tumour_region_bams,
+    normal_region_bams,
+    museq_vcf,
+    strelka_snv_vcf,
+    strelka_indel_vcf,
+    snv_h5,
+    config,
+):
+    workflow = pypeliner.workflow.Workflow(default_ctx=ctx)
+
     if "{reads}" in normal_bam_template or "{reads}" in wgs_bam_template:
         raise ValueError("input template for variant calling only supports region based splits")
-
 
     workflow.setobj(
         obj=mgd.OutputChunks('cell_id'),
@@ -281,6 +293,18 @@ def variant_counting_workflow(workflow, args):
 
     cellids = helpers.get_samples(args['input_yaml'])
 
+
+def variant_counting_workflow(
+    vcfs,
+    tumour_cell_bams,
+    results_h5,
+    config,
+):
+    """ Count variant reads for multiple sets of variants across cells.
+    """
+
+    workflow = pypeliner.workflow.Workflow(default_ctx=ctx)
+
     workflow.setobj(
         obj=mgd.OutputChunks('cell_id'),
         value=cellids,
@@ -312,7 +336,7 @@ def variant_counting_workflow(workflow, args):
             mgd.InputFile('bam_markdups', 'cell_id', fnames=bam_files),
             mgd.InputFile('bam_markdups_index', 'cell_id', fnames=bai_files),
             mgd.TempInputFile('all.snv.vcf.gz'),
-            mgd.OutputFile(results_file),
+            mgd.OutputFile(results_h5),
         ),
         kwargs={
             'docker_config': helpers.build_docker_args(config['docker'], 'single_cell_pipeline')
